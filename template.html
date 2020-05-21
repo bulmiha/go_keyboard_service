@@ -15,18 +15,20 @@
                     console.log("Keys socket is open")
                     window.addEventListener('keydown', function (evt) {
                         if (!evt.repeat) {
-                            console.log(evt.code, evt.keyCode.toString(16));
-                            var k = new Uint8Array(2)
-                            k[0] = 0
-                            k[1] = evt.keyCode
-                            wsKeys.send(k)
+                            console.log(evt.code, evt.keyCode);
+                                var k = new Uint8Array(2)
+                                k[0] = 0
+                                k[1] = evt.keyCode
+                                wsKeys.send(k)
                         }
                     });
                     window.addEventListener('keyup', function (evt) {
-                        var k = new Uint8Array(2)
-                        k[0] = 1
-                        k[1] = evt.keyCode
-                        wsKeys.send(k)
+                        if (!evt.repeat){
+                            var k = new Uint8Array(2)
+                            k[0] = 1
+                            k[1] = evt.keyCode
+                            wsKeys.send(k)
+                        }
                     });
                 }
                 wsKeys.onclose = function (evt) {

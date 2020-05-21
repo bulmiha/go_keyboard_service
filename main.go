@@ -2,38 +2,39 @@ package main
 
 import (
 	"flag"
-	"github.com/gorilla/websocket"
 	"html/template"
 	"io"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/gorilla/websocket"
+	"github.com/jacobsa/go-serial/serial"
 )
 
-var keysToCodes =map[byte]byte{
+var keysToCodes = map[byte]byte{
 
-	96:0x70,
-	49:0x16,
-	97:0x69,
-	50:0x1e,
-	98:0x72,
-	51:0x26,
-	99:0x7A,
-	52:0x25,
-	100:0x6B,
-	53:0x2e,
-	101:0x73,
-	54:0x36,
-	102:0x74,
-	55:0x3d,
-	103:0x6C,
-	56:0x3e,
-	104:75,
-	57:0x46,
-	105:0x7d,
-	48:0x45,
-
-
+	96:  0x70,
+	49:  0x16,
+	97:  0x69,
+	50:  0x1e,
+	98:  0x72,
+	51:  0x26,
+	99:  0x7A,
+	52:  0x25,
+	100: 0x6B,
+	53:  0x2e,
+	101: 0x73,
+	54:  0x36,
+	102: 0x74,
+	55:  0x3d,
+	103: 0x6C,
+	56:  0x3e,
+	104: 75,
+	57:  0x46,
+	105: 0x7d,
+	48:  0x45,
+	// 51:  0x15,
 }
 
 var addr = flag.String("a", "localhost:8080", "http service address")
@@ -88,12 +89,19 @@ func keyAPI(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		if *toDump {
-			log.Printf("Received: %02X %d %s",keysToCodes[message[1]],message[1], func() string {if message[0]>0{return "Up"}else {return "Down"}}())
+			log.Printf("Received: %02X %d %s", keysToCodes[message[1]], message[1], func() string {
+				if message[0] > 0 {
+					return "Up"
+				}
+				return "Down"
+			}())
 			//log.Println(keysToCodes[message[1]])
 			//log.Println("Received:",message[0],message[1])
 		}
 
-		//serialPort.Write(message)
+		if *serialInterface != "demo" {
+			serialPort.Write(message)
+		}
 	}
 }
 
@@ -104,23 +112,25 @@ func main() {
 		os.Exit(1)
 	}
 	var err error
-	homeTemplate,err=template.ParseFiles("template.html")
-	if err!=nil{
+	homeTemplate, err = template.ParseFiles("template.html")
+	if err != nil {
 		panic(err)
 	}
-	//serialOptions := serial.OpenOptions{
-	//	PortName:        *serialInterface,
-	//	BaudRate:        *serialSpeed,
-	//	DataBits:        8,
-	//	StopBits:        1,
-	//	MinimumReadSize: 4,
-	//}
+	if *serialInterface != "demo" {
+		serialOptions := serial.OpenOptions{
+			PortName:        *serialInterface,
+			BaudRate:        *serialSpeed,
+			DataBits:        8,
+			StopBits:        1,
+			MinimumReadSize: 4,
+		}
 
-	//serialPort, err = serial.Open(serialOptions)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//defer serialPort.Close()
+		serialPort, err = serial.Open(serialOptions)
+		if err != nil {
+			panic(err)
+		}
+		defer serialPort.Close()
+	}
 	log.SetFlags(0)
 	http.HandleFunc("/", home)
 	http.HandleFunc("/echo", echo)
