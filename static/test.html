@@ -1,0 +1,24 @@
+<html>
+<head>
+    <script src="libs/request.min.js"></script>
+    <script src="libs/adapter.min.js"></script>
+    <script src="webrtcstreamer.js"></script>
+    <script>
+        window.onload=function() {
+            var webRtcServer = new WebRtcStreamer("video", "http://localhost:8000");
+            document.getElementById("b").onclick = function () {
+                webRtcServer.connect(document.getElementById("s").value,"","rtptransport=tcp&timeout=60")
+            }
+            document.getElementById("bc").onclick = function () {
+                webRtcServer.disconnect()
+            }
+        }
+    </script>
+</head>
+<body>
+<video id="video"></video>
+<p><input id="s" type="url"></p>
+<p><input type="button" id="b" name="Connect" value="Connect"></p>
+<p><input type="button" id="bc" name="Disconnect" value="Disconnect"></p>
+</body>
+</html>

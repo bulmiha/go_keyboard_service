@@ -2,14 +2,18 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"html/template"
 	"io"
 	"log"
+	"net"
 	"net/http"
+	"net/http/fcgi"
 	"os"
 
 	"github.com/gorilla/websocket"
 	"github.com/jacobsa/go-serial/serial"
+	"github.com/gorilla/handlers"
 )
 
 var keysToCodes = map[byte]byte{
@@ -37,16 +41,17 @@ var keysToCodes = map[byte]byte{
 	// 51:  0x15,
 }
 
-var addr = flag.String("a", "localhost:8080", "http service address")
+var addr = flag.String("a", "127.0.0.1:8080", "Binding address")
 var toDump = flag.Bool("d", false, "Dump all keypress data")
 var serialInterface = flag.String("i", "", "Serial Arduino board interface (required)")
 var serialSpeed = flag.Uint("b", 9600, "Serial baud rate")
+var asFCGI = flag.Bool("cgi", false, "Start in FCGI mode")
 
 var upgrader = websocket.Upgrader{} // use default options
 var serialPort io.ReadWriteCloser
 
 func home(w http.ResponseWriter, r *http.Request) {
-	homeTemplate.Execute(w, "ws://"+r.Host)
+	homeTemplate.Execute(w, r.Host)
 }
 
 var homeTemplate *template.Template
@@ -75,6 +80,7 @@ func echo(w http.ResponseWriter, r *http.Request) {
 }
 
 func keyAPI(w http.ResponseWriter, r *http.Request) {
+	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("Upgrade:", err)
@@ -104,6 +110,10 @@ func keyAPI(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+func dump(w http.ResponseWriter, r *http.Request)  {
+	fmt.Println(r.URL)
+	w.WriteHeader(200)
+}
 
 func main() {
 	flag.Parse()
@@ -131,9 +141,20 @@ func main() {
 		}
 		defer serialPort.Close()
 	}
+	fs := http.FileServer(http.Dir("./static"))
 	log.SetFlags(0)
-	http.HandleFunc("/", home)
+	http.Handle("/static/", http.StripPrefix("/static/", fs))
 	http.HandleFunc("/echo", echo)
 	http.HandleFunc("/keys", keyAPI)
-	log.Fatal(http.ListenAndServe(*addr, nil))
+	http.HandleFunc("/", home)
+
+	if *asFCGI {
+		l, err := net.Listen("tcp", *addr)
+		if err != nil {
+			panic(err)
+		}
+		log.Fatal(fcgi.Serve(l, handlers.LoggingHandler(os.Stdout, http.DefaultServeMux)))
+	} else {
+		log.Fatal(http.ListenAndServe(*addr, handlers.LoggingHandler(os.Stdout, http.DefaultServeMux)))
+	}
 }
