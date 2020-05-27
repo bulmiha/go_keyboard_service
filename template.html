@@ -42,8 +42,8 @@
                     return false
                 }
                 wsKeys = new WebSocket("wss://" + location.host + location.pathname + "keys")
-                // var webRTCStreamer = new WebRtcStreamer("video", location.protocol + '//' + window.location.hostname + ':8080')
-                var webRTCStreamer = new WebRtcStreamer("video",'http://localhost:8000')
+                var webRTCStreamer = new WebRtcStreamer("video", location.protocol + '//' + window.location.hostname + ':8080')
+                // var webRTCStreamer = new WebRtcStreamer("video",'http://localhost:8000')
                 wsKeys.onopen = function (evt) {
 
                     console.log("Keys socket is open")
