@@ -1,9 +1,0 @@
-syntax="proto3";
-package main;
-
-option go_package = ".;main";
-
-message KeyPress{
-  bool down=1;
-  bytes keycode=2;
-}

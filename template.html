@@ -1,10 +1,36 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
-    <script src="static/libs/request.min.js" ></script>
-    <script src="static/libs/adapter.min.js" ></script>
-    <script src="static/webrtcstreamer.js" ></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="Mark Otto, Jacob Thornton, and Bootstrap contributors">
+    <meta name="generator" content="Jekyll v4.0.1">
+    <title>Remote Access</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
+          integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <script src="libs/request.min.js"></script>
+    <script src="libs/adapter.min.js"></script>
+    <script src="static/webrtcstreamer.js"></script>
+    <link rel="canonical" href="https://getbootstrap.com/docs/4.5/examples/sticky-footer-navbar/">
+    <link href="../assets/dist/css/bootstrap.css" rel="stylesheet">
+    <style>
+        .bd-placeholder-img {
+            font-size: 1.125rem;
+            text-anchor: middle;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        @media (min-width: 768px) {
+            .bd-placeholder-img-lg {
+                font-size: 3.5rem;
+            }
+        }
+    </style>
+    <link href="/static/sticky-footer-navbar.css" rel="stylesheet">
     <script>
 
         window.addEventListener("load", function (evt) {
@@ -15,35 +41,36 @@
                 if (ws) {
                     return false
                 }
-                wsKeys = new WebSocket("wss://"+location.host+location.pathname+"keys")
-                var webRTCStreamer = new WebRtcStreamer("video",location.protocol+'//'+window.location.hostname+':8080')
+                wsKeys = new WebSocket("wss://" + location.host + location.pathname + "keys")
+                // var webRTCStreamer = new WebRtcStreamer("video", location.protocol + '//' + window.location.hostname + ':8080')
+                var webRTCStreamer = new WebRtcStreamer("video",'http://localhost:8000')
                 wsKeys.onopen = function (evt) {
 
                     console.log("Keys socket is open")
                     window.addEventListener('keydown', function (evt) {
                         if (!evt.repeat) {
                             console.log(evt.code, evt.keyCode);
-                                var k = new Uint8Array(2)
-                                k[0] = 0
-                                k[1] = evt.keyCode
-                                wsKeys.send(k)
+                            var k = new Uint8Array(2)
+                            k[0] = 0
+                            k[1] = evt.keyCode
+                            wsKeys.send(k)
                         }
                     });
                     window.addEventListener('keyup', function (evt) {
-                        if (!evt.repeat){
+                        if (!evt.repeat) {
                             var k = new Uint8Array(2)
                             k[0] = 1
                             k[1] = evt.keyCode
                             wsKeys.send(k)
                         }
                     });
-                    webRTCStreamer.connect("PC","PC","rtptransport=tcp&timeout=60")
+                    webRTCStreamer.connect("PC", "PC", "rtptransport=tcp&timeout=60")
                 }
                 wsKeys.onclose = function (evt) {
                     window.removeEventListener('keydown')
                     window.removeEventListener('keyup')
                     webRTCStreamer.disconnect()
-                    webRTCStreamer=null
+                    webRTCStreamer = null
                     wsKeys = null
                 }
             }
@@ -58,81 +85,47 @@
                 d.textContent = message;
                 output.appendChild(d);
             };
-            document.getElementById("open").onclick = function (evt) {
-                if (ws) {
-                    return false;
-                }
-                ws = new WebSocket("{{.}}" + "/echo");
-                ws.onopen = function (evt) {
-                    print("OPEN");
-                }
-                ws.onclose = function (evt) {
-                    print("CLOSE");
-                    ws = null;
-                }
-                ws.onmessage = function (evt) {
-                    print("RESPONSE: " + evt.data);
-                }
-                ws.onerror = function (evt) {
-                    print("ERROR: " + evt.data);
-                }
-                return false;
-            };
-            document.getElementById("send").onclick = function (evt) {
-                if (!ws) {
-                    return false;
-                }
-                print("SEND: " + input.value);
-                ws.send(input.value);
-                return false;
-            };
-            document.getElementById("close").onclick = function (evt) {
-                if (!ws) {
-                    return false;
-                }
-                ws.close();
-                return false;
-            };
         });
     </script>
 </head>
-<body>
-<table>
-    <tr>
-        <td valign="top" width="50%">
-            <p>Click "Open" to create a connection to the server,
-                "Send" to send a message to the server and "Close" to close the connection.
-                You can change the message and send multiple times.
-            <p>
-                <form>
-                    <button id="open">Open</button>
-                    <button id="close">Close</button>
-            <p><input id="input" type="text" value="Hello world!">
-                <button id="send">Send</button>
-                </form>
-        </td>
-        <td valign="top" width="50%">
-            <div id="output"></div>
-        </td>
-    </tr>
-</table>
-<br>
-<table>
-    <tr>
-        <td valign="top" width="50%">
-            <p>Click "Open" to create a connection to the server. After that it'll send all key presses to the server
-            <p>
-                {{/*                <form>*/}}
-                <button id="openKeys">Open</button>
-                <button id="closeKeys">Close</button>
-                {{/*            </form>*/}}
-        </td>
-        <td valign="top" width="50%">
-            <div id="output"></div>
-        </td>
-    </tr>
-</table>
-<p><video id="video"></video> </p>
-<p>Host: {{.}}</p>
+<body class="d-flex flex-column h-100">
+<header>
+    <!-- Fixed navbar -->
+    <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+        <a class="navbar-brand" href="#">Available PCs:</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse"
+                aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item active">
+                    <a class="nav-link" href="#">Main <span class="sr-only">(current)</span></a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+</header>
+<main role="main" class="flex-shrink-0">
+    <div class="container">
+        <h1 class="mt-5">Remote control application using WebRTC</h1>
+        <p>
+            <video id="video" size="auto"></video>
+        </p>
+        <button id="openKeys" class="btn btn-success">Open</button>
+        <button id="closeKeys" class="btn btn-danger">Close</button>
+
+
+    </div>
+</main>
+<footer class="footer mt-auto py-3">
+    <div class="container">
+        <span class="text-muted">Host: {{.}}. Made using GoLang and Bootstrap.</span>
+    </div>
+</footer>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+<script>window.jQuery || document.write('<script src="../assets/js/vendor/jquery.slim.min.js"><\/script>')</script><script src="../assets/dist/js/bootstrap.bundle.js"></script></body>
+</html>
+
 </body>
 </html>

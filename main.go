@@ -58,28 +58,28 @@ func home(w http.ResponseWriter, r *http.Request) {
 
 var homeTemplate *template.Template
 
-func echo(w http.ResponseWriter, r *http.Request) {
-	c, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println("Upgrade:", err)
-		return
-	}
-	defer c.Close()
-
-	for {
-		mt, message, err := c.ReadMessage()
-		if err != nil {
-			log.Println("Read:", err)
-			break
-		}
-		log.Printf("Received: %s", message)
-		err = c.WriteMessage(mt, message)
-		if err != nil {
-			log.Println("Write:", err)
-		}
-
-	}
-}
+//func echo(w http.ResponseWriter, r *http.Request) {
+//	c, err := upgrader.Upgrade(w, r, nil)
+//	if err != nil {
+//		log.Println("Upgrade:", err)
+//		return
+//	}
+//	defer c.Close()
+//
+//	for {
+//		mt, message, err := c.ReadMessage()
+//		if err != nil {
+//			log.Println("Read:", err)
+//			break
+//		}
+//		log.Printf("Received: %s", message)
+//		err = c.WriteMessage(mt, message)
+//		if err != nil {
+//			log.Println("Write:", err)
+//		}
+//
+//	}
+//}
 
 func keyAPI(w http.ResponseWriter, r *http.Request) {
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
@@ -156,10 +156,11 @@ func main() {
 		}
 		defer serialPort.Close()
 	}
-	fs := http.FileServer(pkger.Dir("/static"))
 	log.SetFlags(0)
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
-	http.HandleFunc("/echo", echo)
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(pkger.Dir("/static"))))
+	http.Handle("/assets/",http.StripPrefix("/assets/", http.FileServer(pkger.Dir("/assets"))))
+	http.Handle("/libs/",http.StripPrefix("/libs/", http.FileServer(pkger.Dir("/libs"))))
+	//http.HandleFunc("/echo", echo)
 	http.HandleFunc("/keys", keyAPI)
 	http.HandleFunc("/", home)
 
