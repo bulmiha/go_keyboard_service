@@ -5,15 +5,17 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"net/http/fcgi"
 	"os"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/websocket"
 	"github.com/jacobsa/go-serial/serial"
-	"github.com/gorilla/handlers"
+	"github.com/markbates/pkger"
 )
 
 var keysToCodes = map[byte]byte{
@@ -116,16 +118,29 @@ func dump(w http.ResponseWriter, r *http.Request)  {
 }
 
 func main() {
+
+	//pkger.Include("static")
+	//pkger.Include("template.html")
 	flag.Parse()
 	if *serialInterface == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
 	var err error
-	homeTemplate, err = template.ParseFiles("template.html")
+	templateTextFile,err  := pkger.Open("/template.html")
 	if err != nil {
 		panic(err)
 	}
+	templateText,err:=ioutil.ReadAll(templateTextFile)
+	if err != nil {
+		panic(err)
+	}
+	templateTextFile=nil
+	homeTemplate, err = template.New("index").Parse(string(templateText))
+	if err != nil {
+		panic(err)
+	}
+	templateText=nil
 	if *serialInterface != "demo" {
 		serialOptions := serial.OpenOptions{
 			PortName:        *serialInterface,
@@ -141,7 +156,7 @@ func main() {
 		}
 		defer serialPort.Close()
 	}
-	fs := http.FileServer(http.Dir("./static"))
+	fs := http.FileServer(pkger.Dir("/static"))
 	log.SetFlags(0)
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 	http.HandleFunc("/echo", echo)
