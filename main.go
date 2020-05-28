@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -18,6 +17,7 @@ import (
 	"github.com/markbates/pkger"
 )
 
+// KeyCode mop to comvert JS KeyCode to PS/2 Scan Code
 var keysToCodes = map[byte]byte{
 
 	96:  0x70,
@@ -43,105 +43,92 @@ var keysToCodes = map[byte]byte{
 	// 51:  0x15,
 }
 
+// Setting up command line flags
+
+// Serving address
 var addr = flag.String("a", "127.0.0.1:8080", "Binding address")
+
+// Dumping all keyboard data to stdout
 var toDump = flag.Bool("d", false, "Dump all keypress data")
+
+// Serial interface pseudo-file
 var serialInterface = flag.String("i", "", "Serial Arduino board interface (required)")
+
+// Serial interface baud-rate
 var serialSpeed = flag.Uint("b", 9600, "Serial baud rate")
+
+// Use FastCGI protocol
 var asFCGI = flag.Bool("cgi", false, "Start in FCGI mode")
 
+// WebSocket html connection upgrader
 var upgrader = websocket.Upgrader{} // use default options
+
+// Serial interface object
 var serialPort io.ReadWriteCloser
 
+// Serving main page using a template
 func home(w http.ResponseWriter, r *http.Request) {
 	homeTemplate.Execute(w, r.Host)
 }
 
+// Precompiled home page template object
 var homeTemplate *template.Template
 
-//func echo(w http.ResponseWriter, r *http.Request) {
-//	c, err := upgrader.Upgrade(w, r, nil)
-//	if err != nil {
-//		log.Println("Upgrade:", err)
-//		return
-//	}
-//	defer c.Close()
-//
-//	for {
-//		mt, message, err := c.ReadMessage()
-//		if err != nil {
-//			log.Println("Read:", err)
-//			break
-//		}
-//		log.Printf("Received: %s", message)
-//		err = c.WriteMessage(mt, message)
-//		if err != nil {
-//			log.Println("Write:", err)
-//		}
-//
-//	}
-//}
-
+// WebSocket pased keyboard API handler
 func keyAPI(w http.ResponseWriter, r *http.Request) {
-	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-	c, err := upgrader.Upgrade(w, r, nil)
+	upgrader.CheckOrigin = func(r *http.Request) bool { return true } // Upgrade connetion to WebSocket no matter the origin.
+	c, err := upgrader.Upgrade(w, r, nil)                             // Do the connection upgrade.
 	if err != nil {
 		log.Println("Upgrade:", err)
 		return
 	}
 	defer c.Close()
 
-	for {
-		_, message, err := c.ReadMessage()
+	for { // Infinite serving loop
+		_, message, err := c.ReadMessage() // Get a message
 		if err != nil {
 			log.Println("Read:", err)
 			break
 		}
-		if *toDump {
+
+		if *toDump { // If dumping is enabled print the message to stdout
 			log.Printf("Received: %02X %d %s", keysToCodes[message[1]], message[1], func() string {
 				if message[0] > 0 {
 					return "Up"
 				}
 				return "Down"
 			}())
-			//log.Println(keysToCodes[message[1]])
-			//log.Println("Received:",message[0],message[1])
 		}
 
-		if *serialInterface != "demo" {
+		if *serialInterface != "demo" { // If it's not in demo mode, send the message to arduino.
 			serialPort.Write(message)
 		}
 	}
 }
-func dump(w http.ResponseWriter, r *http.Request)  {
-	fmt.Println(r.URL)
-	w.WriteHeader(200)
-}
 
 func main() {
 
-	//pkger.Include("static")
-	//pkger.Include("template.html")
-	flag.Parse()
-	if *serialInterface == "" {
+	flag.Parse()                // Get the flags set using command line and process them into set variables.
+	if *serialInterface == "" { // Serial interface is required. If it's not set display the help and quit.
 		flag.Usage()
 		os.Exit(1)
 	}
 	var err error
-	templateTextFile,err  := pkger.Open("/template.html")
+	templateTextFile, err := pkger.Open("/template.html") // Open template text from embeded data block.
 	if err != nil {
 		panic(err)
 	}
-	templateText,err:=ioutil.ReadAll(templateTextFile)
+	templateText, err := ioutil.ReadAll(templateTextFile) // Read the template text.
 	if err != nil {
 		panic(err)
 	}
-	templateTextFile=nil
-	homeTemplate, err = template.New("index").Parse(string(templateText))
+	templateTextFile = nil                                                // Mem cleanup.
+	homeTemplate, err = template.New("index").Parse(string(templateText)) // Compile the template.
 	if err != nil {
 		panic(err)
 	}
-	templateText=nil
-	if *serialInterface != "demo" {
+	templateText = nil              // Mem cleanup.
+	if *serialInterface != "demo" { // Set up the serial options.
 		serialOptions := serial.OpenOptions{
 			PortName:        *serialInterface,
 			BaudRate:        *serialSpeed,
@@ -150,17 +137,17 @@ func main() {
 			MinimumReadSize: 4,
 		}
 
-		serialPort, err = serial.Open(serialOptions)
+		serialPort, err = serial.Open(serialOptions) // Open serial connection.
 		if err != nil {
 			panic(err)
 		}
 		defer serialPort.Close()
 	}
 	log.SetFlags(0)
+	// Set up http server handlers
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(pkger.Dir("/static"))))
-	http.Handle("/assets/",http.StripPrefix("/assets/", http.FileServer(pkger.Dir("/assets"))))
-	http.Handle("/libs/",http.StripPrefix("/libs/", http.FileServer(pkger.Dir("/libs"))))
-	//http.HandleFunc("/echo", echo)
+	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(pkger.Dir("/assets"))))
+	http.Handle("/libs/", http.StripPrefix("/libs/", http.FileServer(pkger.Dir("/libs"))))
 	http.HandleFunc("/keys", keyAPI)
 	http.HandleFunc("/", home)
 
