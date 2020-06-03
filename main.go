@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/fcgi"
+	"net/http/pprof"
 	"os"
 
 	"github.com/gorilla/handlers"
@@ -145,19 +146,25 @@ func main() {
 	}
 	log.SetFlags(0)
 	// Set up http server handlers
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(pkger.Dir("/static"))))
-	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(pkger.Dir("/assets"))))
-	http.Handle("/libs/", http.StripPrefix("/libs/", http.FileServer(pkger.Dir("/libs"))))
-	http.HandleFunc("/keys", keyAPI)
-	http.HandleFunc("/", home)
+	r := http.NewServeMux()
+	r.Handle("/static/", http.StripPrefix("/static/", http.FileServer(pkger.Dir("/static"))))
+	r.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(pkger.Dir("/assets"))))
+	r.Handle("/libs/", http.StripPrefix("/libs/", http.FileServer(pkger.Dir("/libs"))))
+	r.HandleFunc("/keys", keyAPI)
+	r.HandleFunc("/", home)
+	r.HandleFunc("/debug/pprof/", pprof.Index)
+	r.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	r.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	r.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
 	if *asFCGI {
 		l, err := net.Listen("tcp", *addr)
 		if err != nil {
 			panic(err)
 		}
-		log.Fatal(fcgi.Serve(l, handlers.LoggingHandler(os.Stdout, http.DefaultServeMux)))
+		log.Fatal(fcgi.Serve(l, handlers.LoggingHandler(os.Stdout, r)))
 	} else {
-		log.Fatal(http.ListenAndServe(*addr, handlers.LoggingHandler(os.Stdout, http.DefaultServeMux)))
+		log.Fatal(http.ListenAndServe(*addr, handlers.LoggingHandler(os.Stdout, r)))
 	}
 }
