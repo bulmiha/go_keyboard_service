@@ -33,19 +33,26 @@
     <link href="/static/sticky-footer-navbar.css" rel="stylesheet">
     <script>
         var analyticsUrl = "/nyu/put/"
-        post(analyticsUrl, JSON.stringify({
-            eid: 3,
-            clientTime: Date.now(),
-        }))
+        fetch(analyticsUrl, {
+            method:"POST",
+            body: JSON.stringify({
+                eid: 3,
+                clientTime: Date.now(),
+            })
+        })
         window.addEventListener("load", function (evt) {
             var wsKeys;
             // var stream
             document.getElementById("openKeys").onclick = function (evt) {
-                post(analyticsUrl, JSON.stringify({
+                fetch(analyticsUrl, {
+                    method:"POST",
+                    body: JSON.stringify({
                         eid: 1,
                         clientTime: Date.now(),
                         buttonName: "openKeys",
-                    }))
+                    })
+                }).then(response => response.json())
+                    .then(json => console.log(json));
                 if (ws) {
                     return false
                 }
@@ -58,12 +65,15 @@
                     window.addEventListener('keydown', function (evt) {
                         if (!evt.repeat) {
                             console.log(evt.code, evt.keyCode);
-                            post(analyticsUrl, JSON.stringify({
+                            fetch(analyticsUrl, {
+                                method:"POST",
+                                body: JSON.stringify({
                                     eid: 1,
                                     clientTime: Date.now(),
                                     keyCode: evt.keyCode,
                                     code: evt.code,
-                                }))
+                                })
+                            })
                             var k = new Uint8Array(2)
                             k[0] = 0
                             k[1] = evt.keyCode
